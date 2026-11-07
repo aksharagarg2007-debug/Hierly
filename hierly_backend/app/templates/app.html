@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% block body %}
+<div class="flex min-h-screen"><input type="checkbox" id="m" class="peer hidden">
+<aside class="fixed md:static inset-y-0 left-0 w-60 shrink-0 bg-navy text-white p-4 -translate-x-full peer-checked:translate-x-0 md:translate-x-0 transition z-20">
+<a href="{{ url_for('landing') }}" class="text-2xl font-bold block mb-6">Hierly</a>
+{% for p,l in [('dashboard','Dashboard'),('resume','Resume Analyzer'),('aptitude','Aptitude'),('coding','Coding'),('interview','AI Interview'),('reports','Reports'),('admin','Admin (demo)')] %}
+<a href="{{ url_for(p) }}" class="block rounded-lg px-3 py-2 mb-1 {{ 'bg-white/20' if request.endpoint==p else 'hover:bg-white/10' }}">{{ l }}</a>{% endfor %}
+<a href="{{ url_for('logout') }}" class="block rounded-lg px-3 py-2 mt-6 hover:bg-white/10">Logout</a></aside>
+<main class="flex-1 min-w-0 p-4 md:p-8"><label for="m" class="md:hidden btn mb-3 cursor-pointer">Menu</label>
+<p class="text-xs bg-amber-100 text-amber-900 rounded-lg px-3 py-2 mb-4">AI features need GEMINI_API_KEY and code running needs JUDGE0_URL in your .env file.</p>
+{% block content %}{% endblock %}</main></div>{% endblock %}

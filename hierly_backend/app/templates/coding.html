@@ -1,0 +1,13 @@
+{% extends "app.html" %}{% block content %}
+<h1 class="text-2xl font-bold text-navy mb-3">Coding Practice</h1>
+<div class="grid lg:grid-cols-3 gap-4"><div class="card">{% for x in probs %}<a href="?p={{ x.id }}" class="block rounded-lg px-3 py-2 mb-1 {{ 'bg-sky' if x.id==p.id }} hover:bg-sky">{{ x.title }} <span class="tag !bg-slate-100 !text-slate-700 float-right">{{ x.diff }}</span></a>{% endfor %}</div>
+<div class="card lg:col-span-2"><h3 class="font-semibold text-lg">{{ p.title }} <span class="tag">{{ p.diff }}</span></h3><p class="mt-2 text-sm">{{ p.desc }}</p><p class="mt-2 text-sm font-mono bg-sky rounded p-2">Example: {{ p.ex }}</p>
+<select id="lang" class="inp !w-auto mt-3" onchange="$('code').value=S[this.value]"><option>Python</option><option>JavaScript</option></select>
+<textarea id="code" rows="9" class="inp font-mono mt-2"></textarea>
+<div class="mt-2 space-x-2"><button class="btn" onclick="run()">Run</button><button class="btn2" onclick="run()">Submit</button></div>
+<p class="tag mt-3">Code runs in a Judge0 sandbox (needs JUDGE0_URL). Read input from stdin, print the answer.</p><div id="r" class="mt-2 text-sm"></div></div></div>
+<script>
+const S={Python:'# read input with input(), print the answer\n',JavaScript:'// read stdin and print the answer\n'};$('code').value=S.Python;
+async function run(){$('r').textContent='Running...';const r=await(await fetch('/api/code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:{{ p.id }},lang:$('lang').value,code:$('code').value})})).json();
+$('r').innerHTML=r.map((x,k)=>`<p class="${x.pass?'text-green-700':'text-red-700'}">Test ${k+1}: ${x.pass?'Passed':'Failed'} | input ${x.input} | expected ${x.expected} | got ${x.got}</p>`).join('')}
+</script>{% endblock %}

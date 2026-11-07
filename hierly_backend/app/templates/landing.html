@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block body %}
+<nav class="bg-navy text-white flex items-center justify-between px-6 py-4"><b class="text-2xl">Hierly</b>
+<div class="space-x-3">{% if user %}<a class="btn2 !text-white !border-white" href="{{ url_for('dashboard') }}">Dashboard</a>{% else %}<a href="{{ url_for('login') }}">Login</a><a class="btn !bg-white !text-navy" href="{{ url_for('register') }}">Get Started</a>{% endif %}</div></nav>
+<section class="text-center px-6 py-20 max-w-3xl mx-auto"><h1 class="text-4xl md:text-5xl font-bold text-navy">Prepare Smarter. Interview Better.</h1>
+<p class="mt-4 text-slate-600">AI-powered interview preparation for college students and freshers.</p>
+<div class="mt-8 space-x-3"><a class="btn" href="{{ url_for('register') }}">Get Started</a><a class="btn2" href="{{ url_for('login') }}">Login</a></div></section>
+<section class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto px-6 pb-16">{% for t,d in features %}<div class="card"><h3 class="font-semibold text-navy">{{ t }}</h3><p class="text-sm mt-2 text-slate-600">{{ d }}</p></div>{% endfor %}</section>
+<footer class="text-center text-xs text-slate-500 pb-6">Hierly college project prototype</footer>{% endblock %}

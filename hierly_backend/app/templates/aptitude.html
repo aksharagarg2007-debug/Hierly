@@ -1,0 +1,18 @@
+{% extends "app.html" %}{% block content %}
+<h1 class="text-2xl font-bold text-navy mb-3">Aptitude Practice</h1>
+<div class="mb-4 space-x-2">{% for c in cats %}<a href="?c={{ c }}" class="{{ 'btn' if c==cat else 'btn2' }}">{{ c }}</a>{% endfor %}</div>
+<div class="card max-w-2xl"><div class="flex justify-between text-sm"><span id="n"></span><span id="t" class="font-mono text-navy"></span></div>
+<h3 id="q" class="font-semibold text-lg my-3"></h3><div id="o"></div>
+<div class="mt-3 space-x-2"><button class="btn2" onclick="go(-1)">Previous</button><button class="btn2" onclick="go(1)">Next</button><button class="btn" onclick="sub()">Submit</button></div>
+<div id="r" class="mt-4"></div></div>
+<script>
+const Q={{ qs|tojson }},cat={{ cat|tojson }};let i=0,done=false,A=Q.map(()=>null),t=60*Q.length;
+function show(){$('n').textContent=`Question ${i+1}/${Q.length}`;$('q').textContent=Q[i].q;
+$('o').innerHTML=Q[i].o.map((x,k)=>`<label class="block border rounded-lg p-3 mb-2 cursor-pointer ${A[i]===k?'bg-sky border-navy':''}"><input type="radio" class="mr-2" ${A[i]===k?'checked':''} onchange="A[i]=${k};show()">${x}</label>`).join('')}
+function go(d){i=Math.min(Q.length-1,Math.max(0,i+d));show()}
+const tm=setInterval(()=>{if(done)return;t--;$('t').textContent=Math.floor(t/60)+':'+String(t%60).padStart(2,'0');if(t<=0)sub()},1000);
+async function sub(){if(done)return;done=true;clearInterval(tm);
+const r=await(await fetch('/api/aptitude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cat,answers:A})})).json();
+$('r').innerHTML=`<p class="text-xl font-bold text-navy mb-2">Score: ${r.score}/${r.total}</p>`+r.results.map((x,k)=>`<p class="text-sm mb-2 ${x.ok?'text-green-700':'text-red-700'}">Q${k+1}: ${x.ok?'Correct':'Wrong'}. Answer: ${x.correct}. ${x.e}</p>`).join('')}
+show();
+</script>{% endblock %}

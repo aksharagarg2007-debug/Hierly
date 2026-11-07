@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block body %}
+<div class="min-h-screen grid place-items-center p-4"><form method="post" class="card w-full max-w-sm space-y-3" novalidate>
+<a href="{{ url_for('landing') }}" class="text-2xl font-bold text-navy">Hierly</a>
+<h2 class="text-xl font-semibold">{{ 'Create account' if mode=='register' else 'Welcome back' }}</h2>
+<p class="tag">{% if mode=='login' %}Demo: demo@hierly.com / demo123{% else %}Your account is saved in the database{% endif %}</p>
+{% if msg %}<p class="text-sm bg-red-50 text-red-700 rounded-lg p-2">{{ msg }}</p>{% endif %}
+{% if mode=='register' %}<div><input class="inp" name="name" placeholder="Full name" value="{{ request.form.name }}"><p class="text-xs text-red-600">{{ errs.name }}</p></div>{% endif %}
+<div><input class="inp" name="email" type="email" placeholder="Email" value="{{ request.form.email }}"><p class="text-xs text-red-600">{{ errs.email }}</p></div>
+<div><input class="inp" name="password" type="password" placeholder="Password"><p class="text-xs text-red-600">{{ errs.password }}</p></div>
+<button class="btn w-full">{{ 'Register' if mode=='register' else 'Login' }}</button>
+<p class="text-sm text-center">{% if mode=='login' %}New here? <a class="text-navy underline" href="{{ url_for('register') }}">Register</a>{% else %}Have an account? <a class="text-navy underline" href="{{ url_for('login') }}">Login</a>{% endif %}</p></form></div>{% endblock %}

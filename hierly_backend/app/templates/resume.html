@@ -1,0 +1,21 @@
+{% extends "app.html" %}{% block content %}
+<h1 class="text-2xl font-bold text-navy mb-4">Resume Analyzer</h1>
+<form id="f" class="card max-w-xl"><input id="file" type="file" accept=".pdf" class="inp" onchange="$('nm').textContent=this.files[0]?.name||''">
+<p id="nm" class="text-sm mt-2"></p><div class="h-2 bg-sky rounded mt-2"><div id="bar" class="h-2 bg-navy rounded w-0"></div></div>
+<p id="err" class="text-sm text-red-600 mt-1"></p><textarea id="jd" class="inp mt-2" rows="3" placeholder="Optional: paste a job description to compare"></textarea><button class="btn mt-3">Analyse resume</button> <span id="st" class="text-sm text-slate-500"></span></form>
+<div id="res" class="mt-4" hidden></div>
+<script>
+const L=a=>a.map(x=>`<li>${x}</li>`).join('');
+$('f').onsubmit=e=>{e.preventDefault();const file=$('file').files[0];if(!file){$('err').textContent='Please choose a PDF file first.';return}
+$('err').textContent='';$('st').textContent='Analysing...';const x=new XMLHttpRequest();x.open('POST','/api/resume');
+x.upload.onprogress=v=>$('bar').style.width=(v.loaded/v.total*100)+'%';
+x.onerror=()=>{$('err').textContent='Network error. Please try again.';$('st').textContent=''};
+x.onload=()=>{const r=JSON.parse(x.responseText);$('st').textContent='';if(x.status!=200){$('err').textContent=r.error;return}
+$('res').hidden=false;$('res').innerHTML=`<p class="tag mb-2">AI analysis of ${r.filename}</p><div class="grid md:grid-cols-2 gap-4">
+<div class="card"><p class="text-sm text-slate-500">ATS score</p><p class="text-4xl font-bold text-navy">${r.score}/100</p></div>
+<div class="card"><h3 class="font-semibold">Missing keywords</h3><p class="mt-1">${r.missing.map(k=>`<span class="bg-sky rounded px-2 py-1 text-sm mr-1">${k}</span>`).join('')}</p></div>
+<div class="card"><h3 class="font-semibold">Strengths</h3><ul class="list-disc ml-5 text-sm">${L(r.strengths)}</ul></div>
+<div class="card"><h3 class="font-semibold">Weaknesses</h3><ul class="list-disc ml-5 text-sm">${L(r.weaknesses)}</ul></div>
+<div class="card md:col-span-2"><h3 class="font-semibold">Suggestions</h3><ul class="list-disc ml-5 text-sm">${L(r.tips)}</ul></div></div>`};
+const d=new FormData();d.append('resume',file);d.append('jd',$('jd').value);x.send(d)}
+</script>{% endblock %}

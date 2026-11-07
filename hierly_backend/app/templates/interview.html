@@ -1,0 +1,605 @@
+{% extends "app.html" %}
+{% block content %}
+
+<h1 class="text-2xl font-bold text-navy mb-3">Hierly AI Video Interview</h1>
+
+<div id="setup" class="card max-w-2xl grid grid-cols-2 gap-3">
+
+  <label class="text-sm">Job role
+    <select id="role" class="inp">
+      {% for r in roles %}
+      <option>{{ r }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label class="text-sm">Experience
+    <select id="experience" class="inp">
+      <option>Fresher</option>
+      <option>0-1 years</option>
+    </select>
+  </label>
+
+  <label class="text-sm">Interview type
+    <select id="type" class="inp">
+      {% for k in qs %}
+      <option>{{ k }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label class="text-sm">Number of questions
+    <select id="count" class="inp">
+      <option>3</option>
+      <option>5</option>
+    </select>
+  </label>
+
+  <label class="text-sm col-span-2">Choose your interviewer
+    <select id="avatar-gender" class="inp">
+      <option value="female">Female interviewer</option>
+      <option value="male">Male interviewer</option>
+    </select>
+  </label>
+
+  <button id="start" class="btn col-span-2">
+    Start Video Interview
+  </button>
+</div>
+
+<div id="run" hidden>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <div class="card">
+      <h2 class="font-semibold mb-2">AI Interviewer</h2>
+
+      <div id="avatar-stage"
+        style="height:350px;background:#102747;border-radius:16px;overflow:hidden;position:relative;">
+
+        <canvas id="avatar-canvas"
+          style="width:100%;height:100%;display:block;">
+        </canvas>
+
+        <p id="avatar-status"
+          style="position:absolute;bottom:10px;left:10px;color:white;">
+          Loading 3D interviewer...
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="font-semibold mb-2">Your Camera</h2>
+
+      <video id="candidate-video"
+        autoplay muted playsinline
+        style="width:100%;height:350px;object-fit:cover;background:#0f172a;border-radius:16px;">
+      </video>
+
+      <p id="camera-status" class="text-sm mt-2">
+        Camera not started.
+      </p>
+
+      <div class="flex gap-2 mt-2">
+        <button id="camera-toggle" class="btn2">Camera ON/OFF</button>
+        <button id="mic-toggle" class="btn2">Mic ON/OFF</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card max-w-2xl mt-4">
+
+    <p id="qn" class="text-sm text-slate-500"></p>
+
+    <h3 id="qt" class="text-lg font-semibold my-3"></h3>
+
+    <textarea id="ans" rows="5" class="inp"
+      placeholder="Speak or type your answer..."></textarea>
+
+    <p id="err" class="text-sm text-red-600"></p>
+
+    <div class="mt-3 flex flex-wrap gap-2">
+      <button id="hear" class="btn2">Hear Question</button>
+      <button id="mic" class="btn2">Speak Answer</button>
+      <button id="next" class="btn">Next Question</button>
+      <button id="end" class="btn2">End Interview</button>
+    </div>
+
+    <p id="interview-status" class="text-sm mt-3"></p>
+
+  </div>
+</div>
+
+<div id="res" class="card max-w-2xl mt-4" hidden></div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+const $ = id => document.getElementById(id);
+const QS = {{ qs|tojson }};
+
+let list = [];
+let answers = [];
+let current = 0;
+let gender = "female";
+let stream = null;
+let recognition = null;
+let speaking = false;
+let finished = false;
+let renderer = null;
+let scene = null;
+let camera = null;
+let avatar = null;
+let head = null;
+let mouth = null;
+
+function sphere(parent, color, position, scale) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 40, 32),
+    new THREE.MeshStandardMaterial({
+      color: color,
+      roughness: 0.7
+    })
+  );
+
+  mesh.position.set(...position);
+  mesh.scale.set(...scale);
+  parent.add(mesh);
+  return mesh;
+}
+
+function createAvatar() {
+  avatar = new THREE.Group();
+  scene.add(avatar);
+
+  const skin = gender === "female" ? "#d9a080" : "#c88e70";
+  const hair = gender === "female" ? "#30201c" : "#211b19";
+  const jacket = gender === "female" ? "#354f7d" : "#263b59";
+
+  // Shoulders
+  sphere(avatar, jacket, [0, -1.65, 0], [1.3, 1.15, 0.65]);
+
+  // Neck
+  sphere(avatar, skin, [0, -0.92, 0], [0.29, 0.43, 0.3]);
+
+  // Head
+  head = new THREE.Group();
+  head.position.y = 0.15;
+  avatar.add(head);
+
+  sphere(head, skin, [0, 0, 0], [0.76, 1.02, 0.68]);
+
+  // Hair
+  sphere(head, hair, [0, 0.72, -0.08], [0.78, 0.4, 0.66]);
+
+  if (gender === "female") {
+    sphere(head, hair, [-0.65, -0.3, -0.08], [0.22, 0.8, 0.4]);
+    sphere(head, hair, [0.65, -0.3, -0.08], [0.22, 0.8, 0.4]);
+  }
+
+  // Eyes
+  [-0.29, 0.29].forEach(x => {
+    sphere(head, "#ffffff", [x, 0.13, 0.58], [0.13, 0.085, 0.07]);
+    sphere(head, "#241b19", [x, 0.13, 0.64], [0.055, 0.06, 0.035]);
+  });
+
+  // Nose
+  sphere(head, skin, [0, -0.1, 0.68], [0.09, 0.18, 0.12]);
+
+  // Mouth
+  mouth = sphere(head, "#743b43", [0, -0.43, 0.64], [0.18, 0.035, 0.04]);
+}
+
+function resizeAvatar() {
+  if (!renderer) return;
+
+  const stage = $("avatar-stage");
+  const width = Math.max(stage.clientWidth, 1);
+  const height = Math.max(stage.clientHeight, 1);
+
+  renderer.setSize(width, height, false);
+
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+}
+
+function animateAvatar() {
+  requestAnimationFrame(animateAvatar);
+
+  const time = performance.now() / 1000;
+
+  if (head) {
+    head.rotation.y = Math.sin(time * 0.7) * 0.035;
+    head.rotation.x = Math.sin(time * 0.8) * 0.018;
+  }
+
+  if (mouth) {
+    mouth.scale.y = speaking
+      ? 0.035 + Math.abs(Math.sin(time * 12)) * 0.13
+      : 0.035;
+  }
+
+  renderer.render(scene, camera);
+}
+
+function initAvatar() {
+  try {
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color("#102747");
+
+    camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+    camera.position.set(0, 0, 6);
+
+    renderer = new THREE.WebGLRenderer({
+      canvas: $("avatar-canvas"),
+      antialias: true
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x52617b, 2));
+
+    const light = new THREE.DirectionalLight(0xffffff, 2);
+    light.position.set(-3, 4, 5);
+    scene.add(light);
+
+    createAvatar();
+    resizeAvatar();
+    animateAvatar();
+
+    $("avatar-status").textContent = "3D interviewer ready";
+
+  } catch (error) {
+    console.error("Avatar error:", error);
+    $("avatar-status").textContent = "3D avatar could not load";
+  }
+}
+
+function changeAvatar() {
+  gender = $("avatar-gender").value;
+
+  if (avatar) {
+    scene.remove(avatar);
+
+    avatar.traverse(object => {
+      if (object.geometry) object.geometry.dispose();
+
+      if (object.material) {
+        if (Array.isArray(object.material)) {
+          object.material.forEach(m => m.dispose());
+        } else {
+          object.material.dispose();
+        }
+      }
+    });
+  }
+
+  speechSynthesis.cancel();
+  speaking = false;
+
+  createAvatar();
+}
+
+function speak(text) {
+  if (!("speechSynthesis" in window)) {
+    $("interview-status").textContent = "Speech playback unavailable.";
+    return;
+  }
+
+  speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  utterance.rate = 0.9;
+
+  const voices = speechSynthesis.getVoices();
+
+  const voice = voices.find(v =>
+    gender === "female"
+      ? /samantha|zira|female/i.test(v.name)
+      : /daniel|david|male/i.test(v.name)
+  );
+
+  if (voice) utterance.voice = voice;
+
+  utterance.onstart = () => {
+    speaking = true;
+    $("avatar-status").textContent = "Interviewer is speaking...";
+  };
+
+  utterance.onend = () => {
+    speaking = false;
+    $("avatar-status").textContent = "Waiting for your answer";
+  };
+
+  utterance.onerror = () => {
+    speaking = false;
+    $("avatar-status").textContent = "Ready";
+  };
+
+  speechSynthesis.speak(utterance);
+}
+
+function showQuestion() {
+  $("qn").textContent = `Question ${current + 1} of ${list.length}`;
+  $("qt").textContent = list[current];
+  $("ans").value = answers[current] || "";
+
+  $("next").textContent =
+    current === list.length - 1 ? "Finish Interview" : "Next Question";
+}
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true
+    });
+
+    $("candidate-video").srcObject = stream;
+    $("camera-status").textContent = "Camera and microphone enabled.";
+
+  } catch (error) {
+    console.error(error);
+    $("camera-status").textContent =
+      "Camera unavailable. You can still type answers.";
+  }
+}
+
+async function startInterview() {
+  list = (QS[$("type").value] || []).slice(
+    0,
+    Number($("count").value)
+  );
+
+  if (!list.length) {
+    alert("No questions available for this category.");
+    return;
+  }
+
+  current = 0;
+  answers = [];
+  finished = false;
+
+  $("setup").hidden = true;
+  $("run").hidden = false;
+  $("res").hidden = true;
+  $("next").disabled = false;
+
+  await startCamera();
+
+  showQuestion();
+  speak(list[0]);
+}
+
+function startSpeechRecognition() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    $("err").textContent =
+      "Speech recognition unavailable. Please use Chrome or type your answer.";
+    return;
+  }
+
+  if (recognition) recognition.abort();
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    $("interview-status").textContent = "Listening to your answer...";
+  };
+
+  recognition.onresult = event => {
+    let transcript = "";
+
+    for (let j = 0; j < event.results.length; j++) {
+      transcript += event.results[j][0].transcript;
+    }
+
+    $("ans").value = transcript;
+  };
+
+  recognition.onend = () => {
+    $("interview-status").textContent = "Answer recorded.";
+  };
+
+  recognition.onerror = () => {
+    $("interview-status").textContent = "Speech recognition error.";
+  };
+
+  recognition.start();
+}
+
+async function submitInterview() {
+  $("next").disabled = true;
+  $("interview-status").textContent = "Preparing AI feedback...";
+
+  try {
+    const response = await fetch("/api/interview", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        answers: answers,
+        questions: list,
+        type: $("type").value,
+        role: $("role").value
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.error) {
+      throw new Error(result.error || "Evaluation failed");
+    }
+
+    if (!result.answered) {
+      throw new Error("No answers were given.");
+    }
+
+    const report = $("res");
+    report.hidden = false;
+    report.replaceChildren();
+
+    const title = document.createElement("h2");
+    title.className = "text-xl font-bold";
+    title.textContent = "AI Interview Report";
+    report.appendChild(title);
+
+    const score = document.createElement("p");
+    score.className = "text-3xl font-bold text-navy mt-3";
+    score.textContent = `${result.score}/100`;
+    report.appendChild(score);
+
+    const answered = document.createElement("p");
+    answered.className = "text-sm";
+    answered.textContent = `${result.answered} answer(s) given`;
+    report.appendChild(answered);
+
+    [
+      ["Strengths", result.strengths || []],
+      ["Areas to improve", result.weaknesses || []],
+      ["Tips", result.tips || []]
+    ].forEach(([heading, items]) => {
+      const h = document.createElement("h4");
+      h.className = "font-semibold mt-3";
+      h.textContent = heading;
+      report.appendChild(h);
+
+      const ul = document.createElement("ul");
+      ul.className = "list-disc ml-5 text-sm";
+
+      items.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+
+      report.appendChild(ul);
+    });
+
+    const again = document.createElement("button");
+    again.className = "btn mt-4";
+    again.textContent = "New Interview";
+
+    again.addEventListener("click", () => {
+      $("setup").hidden = false;
+      $("run").hidden = true;
+      report.hidden = true;
+      $("interview-status").textContent = "";
+      $("ans").value = "";
+      $("err").textContent = "";
+      $("next").disabled = false;
+    });
+
+    report.appendChild(again);
+
+    $("interview-status").textContent = "Interview completed successfully.";
+    finished = true;
+
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+      $("candidate-video").srcObject = null;
+    }
+
+    speechSynthesis.cancel();
+    speaking = false;
+
+  } catch (error) {
+    $("interview-status").textContent = error.message;
+    $("next").disabled = false;
+    finished = false;
+  }
+}
+
+$("start").addEventListener("click", startInterview);
+
+$("avatar-gender").addEventListener("change", changeAvatar);
+
+$("hear").addEventListener("click", () => {
+  if (list[current]) speak(list[current]);
+});
+
+$("mic").addEventListener("click", startSpeechRecognition);
+
+$("next").addEventListener("click", () => {
+  if (finished) return;
+
+  answers[current] = $("ans").value.trim();
+
+  if (!answers[current]) {
+    $("err").textContent = "Please answer first.";
+    return;
+  }
+
+  $("err").textContent = "";
+
+  if (current < list.length - 1) {
+    current++;
+    showQuestion();
+    speak(list[current]);
+  } else {
+    submitInterview();
+  }
+});
+
+$("end").addEventListener("click", async () => {
+  if (!list.length || finished) return;
+
+  answers[current] = $("ans").value.trim();
+
+  const hasAnswers = answers.some(a => a && a.trim());
+
+  if (!hasAnswers) {
+    $("interview-status").textContent = "Please answer at least one question.";
+    return;
+  }
+
+  list = list.filter((question, index) => answers[index]?.trim());
+  answers = answers.filter(a => a && a.trim());
+  current = list.length - 1;
+
+  await submitInterview();
+});
+
+$("camera-toggle").addEventListener("click", async () => {
+  if (!stream) {
+    await startCamera();
+    return;
+  }
+
+  const track = stream.getVideoTracks()[0];
+
+  if (track) {
+    track.enabled = !track.enabled;
+    $("camera-status").textContent =
+      track.enabled ? "Camera ON" : "Camera OFF";
+  }
+});
+
+$("mic-toggle").addEventListener("click", () => {
+  if (!stream) return;
+
+  const track = stream.getAudioTracks()[0];
+
+  if (track) {
+    track.enabled = !track.enabled;
+    $("camera-status").textContent =
+      track.enabled ? "Microphone ON" : "Microphone OFF";
+  }
+});
+
+initAvatar();
+
+window.addEventListener("resize", resizeAvatar);
+</script>
+
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "app.html" %}{% block content %}
+<h1 class="text-2xl font-bold text-navy">Welcome, {{ user }}!</h1><p class="text-slate-600 mb-4">Here is your preparation progress.</p>
+<div class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">{% for n,s in d.SCORES.items() %}
+<div class="card"><p class="text-sm text-slate-500">{{ n }} score</p><p class="text-3xl font-bold text-navy">{{ s }}<span class="text-base">/100</span></p>
+<div class="h-2 bg-sky rounded mt-2"><div class="h-2 bg-navy rounded" style="width:{{ s }}%"></div></div>
+<a class="btn2 mt-3 text-sm" href="{{ url_for({'Resume':'resume','Aptitude':'aptitude','Coding':'coding','Interview':'interview'}[n]) }}">Open</a></div>{% endfor %}</div>
+<div class="grid lg:grid-cols-3 gap-4 mt-4"><div class="card lg:col-span-2"><h3 class="font-semibold mb-2">Progress</h3><canvas id="c" height="110"></canvas></div>
+<div class="card"><h3 class="font-semibold mb-2">Recent activity</h3>{% for a,t in d.ACTIVITY %}<p class="text-sm py-2 border-b last:border-0">{{ a }}<span class="block text-xs text-slate-500">{{ t }}</span></p>{% endfor %}</div></div>
+<script>new Chart($('c'),{type:'line',data:{labels:{{ d.TREND.labels|tojson }},datasets:[{label:'Overall score',data:{{ d.TREND.data|tojson }},borderColor:'#0B1F4B',backgroundColor:'#E6F1FB',fill:true,tension:.3}]}})</script>{% endblock %}

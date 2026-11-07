@@ -1,0 +1,8 @@
+{% extends "app.html" %}{% block content %}
+<h1 class="text-2xl font-bold text-navy mb-3">Performance Report</h1>
+<div class="grid lg:grid-cols-3 gap-4"><div class="card"><p class="text-sm text-slate-500">Overall score</p><p class="text-5xl font-bold text-navy">{{ d.REPORT.overall }}<span class="text-lg">/100</span></p></div>
+<div class="card lg:col-span-2"><h3 class="font-semibold mb-2">Module-wise</h3><canvas id="a" height="90"></canvas></div>
+<div class="card"><h3 class="font-semibold">Strengths</h3><ul class="list-disc ml-5 text-sm">{% for s in d.REPORT.strong %}<li>{{ s }}</li>{% endfor %}</ul><h3 class="font-semibold mt-3">Improve</h3><ul class="list-disc ml-5 text-sm">{% for s in d.REPORT.improve %}<li>{{ s }}</li>{% endfor %}</ul></div>
+<div class="card lg:col-span-2"><h3 class="font-semibold mb-2">Previous attempts</h3><canvas id="b" height="90"></canvas></div></div>
+<script>new Chart($('a'),{type:'bar',data:{labels:{{ d.SCORES.keys()|list|tojson }},datasets:[{label:'Score',data:{{ d.SCORES.values()|list|tojson }},backgroundColor:'#0B1F4B'}]},options:{scales:{y:{max:100}}}});
+new Chart($('b'),{type:'line',data:{labels:{{ d.REPORT.attempts.labels|tojson }},datasets:[{label:'Overall',data:{{ d.REPORT.attempts.data|tojson }},borderColor:'#0B1F4B',tension:.3}]}})</script>{% endblock %}

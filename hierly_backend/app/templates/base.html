@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}Hierly{% endblock %}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>tailwind.config={theme:{extend:{colors:{navy:'#0B1F4B',pale:'#E6F1FB'}}}}</script>
+<style type="text/tailwindcss">@layer components{.card{@apply bg-white rounded-2xl shadow-sm border border-slate-200 p-5}.btn{@apply inline-block rounded-xl bg-navy text-white px-4 py-2 font-medium hover:opacity-90 disabled:opacity-40}.btn2{@apply inline-block rounded-xl border border-navy text-navy px-4 py-2 font-medium hover:bg-pale}.inp{@apply w-full rounded-xl border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-400}.tag{@apply text-xs bg-amber-100 text-amber-800 rounded px-2 py-0.5}}</style>
+</head><body class="bg-pale/50 text-slate-800">
+<script>const $=id=>document.getElementById(id);</script>
+{% block body %}{% endblock %}</body></html>
